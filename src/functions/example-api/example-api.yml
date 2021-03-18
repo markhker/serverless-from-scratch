@@ -1,0 +1,7 @@
+exampleApi:
+  handler: src/functions/example-api/exampleApi.main
+  events:
+    - http:
+        method: get
+        path: /example
+        cors: true

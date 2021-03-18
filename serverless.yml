@@ -1,0 +1,51 @@
+service: serverless
+
+package:
+  individually: true
+
+custom:
+  stage: ${opt:stage, self:provider.stage}
+  secrets: ${file(secrets.yml):custom}
+  logRetentionDaysByStage:
+    prod: 7
+    dev: 3
+    local: 1
+  webpack:
+    packager: 'yarn'
+    keepOutputDirectory: true
+    includeModules:
+      forceExclude:
+        - aws-sdk
+
+plugins:
+  - serverless-webpack
+  - serverless-offline
+
+provider:
+  name: aws
+  runtime: nodejs12.x # https://github.com/dherault/serverless-offline/issues/1187
+  timeout: 30
+  memorySize: 512
+  stage: local
+  region: us-west-2
+  logRetentionInDays: ${self:custom.logRetentionDaysByStage.${self:custom.stage}}
+  lambdaHashingVersion: 20201221
+  apiGateway:
+    minimumCompressionSize: 6000
+    shouldStartNameWithService: true
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+          Resource: "arn:aws:dynamodb:us-east-2:*:*"
+  environment:
+    AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1
+    NODE_ENV: ${self:custom.secrets.nodeEnv.${self:custom.stage}}
+
+functions:
+  - ${file(src/functions/example-api/example-api.yml)}
+
+resources:
+  - ${file(resources/api-gateway-errors.yml)}
